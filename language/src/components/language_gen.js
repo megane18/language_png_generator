@@ -502,7 +502,7 @@ const LanguageSampleGenerator = () => {
                 value={newLanguageName}
                 onChange={(e) => setNewLanguageName(e.target.value)}
                 className="w-full p-2 border rounded"
-                placeholder="e.g., Zulu"
+                placeholder="e.g., Zulu or Spanish"
               />
             </div>
             <div>
