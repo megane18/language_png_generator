@@ -157,8 +157,6 @@ const LanguageSampleGenerator = () => {
       rtl: false
     }
   ];
-  // Use useEffect to handle localStorage to avoid hydration issues
-const [allLanguages, setAllLanguages] = useState(initialLanguages);
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -172,25 +170,17 @@ const [allLanguages, setAllLanguages] = useState(initialLanguages);
     setModalOpen(true);
   };
 
-
-  // Use useEffect for client-side operations to fetch from API
-useEffect(() => {
-    const fetchLanguages = async () => {
-      try {
-        const response = await fetch('/api/languages');
-        const data = await response.json();
-        
-        // If we have stored languages, use them; otherwise use default list
-        setAllLanguages(data.length > 0 ? data : initialLanguages);
-      } catch (error) {
-        console.error('Error fetching languages:', error);
-        setAllLanguages(initialLanguages);
-      }
-    };
-    
-    fetchLanguages();
-  }, []);
+  // Use useEffect to handle localStorage to avoid hydration issues
+  const [allLanguages, setAllLanguages] = useState(initialLanguages);
   
+  // Use useEffect for client-side operations
+  useEffect(() => {
+    // Only run on client-side
+    const savedLanguages = localStorage.getItem('languageCollection');
+    if (savedLanguages) {
+      setAllLanguages(JSON.parse(savedLanguages));
+    }
+  }, []);
   const [selectedLanguage, setSelectedLanguage] = useState('');
   const [customText, setCustomText] = useState('');
   const [backgroundColor, setBackgroundColor] = useState('#f8f9fa');
@@ -213,45 +203,35 @@ useEffect(() => {
   };
 
   // Function to add a new language
-  // Function to add a new language
-const addNewLanguage = async () => {
+  const addNewLanguage = () => {
     if (newLanguageName.trim() && newLanguageSample.trim()) {
-      // Check is now handled by the API
+      // Check if language already exists
+      if (allLanguages.some(lang => lang.name.toLowerCase() === newLanguageName.trim().toLowerCase())) {
+        showModal("Language Exists", "This language already exists in the collection.");
+        return;
+      }
+      
       const newLanguage = {
         name: newLanguageName.trim(),
         sampleText: newLanguageSample.trim(),
         rtl: isRtl
       };
       
-      try {
-        const response = await fetch('/api/languages', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(newLanguage),
-        });
-        
-        const result = await response.json();
-        
-        if (!response.ok) {
-          showModal("Error", result.error || "Failed to add language");
-          return;
-        }
-        
-        // Update local state with the new language
-        setAllLanguages([...allLanguages, newLanguage]);
-        
-        // Reset form
-        setNewLanguageName('');
-        setNewLanguageSample('');
-        setIsRtl(false);
-        
-        // Show success message
-        showModal("Language Added", `${newLanguageName.trim()} has been added to the language collection.`);
-      } catch (error) {
-        showModal("Error", "Failed to add language. Please try again.");
+      const updatedLanguages = [...allLanguages, newLanguage];
+      setAllLanguages(updatedLanguages);
+      
+      // Save to localStorage (only in browser environment)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('languageCollection', JSON.stringify(updatedLanguages));
       }
+      
+      // Reset the form
+      setNewLanguageName('');
+      setNewLanguageSample('');
+      setIsRtl(false);
+      
+      // Show success modal
+      showModal("Language Added", `${newLanguageName.trim()} has been added to the language collection.`);
     } else {
       showModal("Missing Information", "Please enter both a language name and sample text.");
     }
@@ -558,9 +538,9 @@ const addNewLanguage = async () => {
             >
               Add Language
             </button>
-            {/* <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs text-gray-500 mt-2">
               Note: Added languages will be saved in your browser and remain available even after refreshing the page.
-            </p> */}
+            </p>
           </div>
         )}
       </div>
